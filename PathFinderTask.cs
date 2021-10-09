@@ -43,10 +43,39 @@ namespace RoutePlanning
             return bestOrder;
         }
 
-        private static void AssessmentZeroCell(int[,] matrix)
+        private static Cell FindMaxAssessment(int[,] matrix)
         {
-            int row = matrix.GetLength(0);
-            int col = matrix.GetLength(1);
+            int minValueInRow = int.MaxValue;
+            int maxAssessment = 0;
+            int assessmentI = 0;
+            int assessmentJ = 0;
+            int cell;
+            for (int i = 0; i < _sizeRow; i++)
+            {
+                for (int j = 0; j < _sizeRow; j++)
+                {
+                    if (matrix[i, j] == 0)
+                    {
+                        for (int k = 0; k < _sizeRow; k++)
+                        {
+                            cell = matrix[i, k];
+                            if (cell != -1 && j != k && minValueInRow > cell)
+                            {
+                                minValueInRow = cell;
+                                assessmentI = i;
+                                assessmentJ = k;
+                            }
+                        }
+
+                        if (maxAssessment < minValueInRow)
+                        {
+                            maxAssessment = minValueInRow;
+                        }
+                        minValueInRow = 0;
+                    }
+                }
+            }
+            return new Cell(maxAssessment, assessmentI, assessmentJ);
         }
 
         private static int[] GetMinPath(Point[] checkpoints)
@@ -74,6 +103,8 @@ namespace RoutePlanning
             int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByRow, true);
             matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByCol, false);
             ShowMatrix(matrixReduced);
+
+            Cell assessment = FindMaxAssessment(matrixReduced);
 
             return new int[0];
         }
