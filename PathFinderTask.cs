@@ -27,6 +27,8 @@ namespace RoutePlanning
 
     public static class PathFinderTask
     {
+        private static int[,] _matrixDistance;
+        private static int _sizeRow;
         public static int[] FindBestCheckpointsOrder(Point[] p)
         {
             int[] minPath = GetMinPath(p);
@@ -41,30 +43,36 @@ namespace RoutePlanning
             return bestOrder;
         }
 
+        private static void AssessmentZeroCell(int[,] matrix)
+        {
+            int row = matrix.GetLength(0);
+            int col = matrix.GetLength(1);
+        }
+
         private static int[] GetMinPath(Point[] checkpoints)
         {
-            int countPoints = checkpoints.Length;
-            int[,] matrDistance = GetMatrixDistance(checkpoints);
-            ShowMatrix(matrDistance);
-            if (countPoints == 2)
+            _sizeRow = checkpoints.Length;
+            SetMatrixDistance(checkpoints);
+            ShowMatrix(_matrixDistance);
+            if (_sizeRow == 2)
             {
                 return new int[] { 0, 1 };
             }
 
-            int[] minValuesByRow = GetSumInRowOrCol(matrDistance, true);
-            int[] minValuesByCol = GetSumInRowOrCol(matrDistance, false);
+            int[] minValuesByRow = GetSumInRowOrCol(_matrixDistance, true);
+            int[] minValuesByCol = GetSumInRowOrCol(_matrixDistance, false);
             
             int sumMinValuesByRow = 0;
             int sumMinValuesByCol = 0;
             
-            for (int i = 0; i < countPoints; i++)
+            for (int i = 0; i < _sizeRow; i++)
             {
                 sumMinValuesByRow += minValuesByRow[i];
                 sumMinValuesByCol += minValuesByCol[i];
             }
 
-            int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(matrDistance, minValuesByRow, true);
-            matrixReduced = GetMatrixMinusValueByRowOrCol(matrDistance, minValuesByCol, false);
+            int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByRow, true);
+            matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByCol, false);
             ShowMatrix(matrixReduced);
 
             return new int[0];
@@ -72,13 +80,11 @@ namespace RoutePlanning
 
         private static int[,] GetMatrixMinusValueByRowOrCol(int[,] matrix, int[] value, bool isRow)
         {
-            int row = matrix.GetLength(0);
-            int col = matrix.GetLength(1);
-            int[,] newMatrix = new int[row, col];
+            int[,] newMatrix = new int[_sizeRow, _sizeRow];
             int cell;
-            for (int i = 0; i < row; i++)
+            for (int i = 0; i < _sizeRow; i++)
             {
-                for (int j = 0; j < col; j++)
+                for (int j = 0; j < _sizeRow; j++)
                 {
                     cell = (isRow) ? matrix[i, j] : matrix[j, i];
                     newMatrix[i, j] = (cell != -1) ? cell - value[j] : cell;                   
@@ -90,11 +96,11 @@ namespace RoutePlanning
         private static int[] GetSumInRowOrCol(int[,] matrix, bool isRow)
         {
             int min = int.MaxValue;
-            int[] minValues = new int[matrix.GetLength(0)];
+            int[] minValues = new int[_sizeRow];
             int cell;
-            for (int i = 0; i < matrix.GetLength(0); i++)
+            for (int i = 0; i < _sizeRow; i++)
             {
-                for (int j = 0; j < matrix.GetLength(1); j++)
+                for (int j = 0; j < _sizeRow; j++)
                 {
                     cell = (isRow) ? matrix[i, j] : matrix[j, i];
                     if (cell < min && cell != -1)
@@ -108,24 +114,21 @@ namespace RoutePlanning
             return minValues;
         }
 
-        private static int[,] GetMatrixDistance(Point[] checkpoints)
+        private static void SetMatrixDistance(Point[] checkpoints)
         {
-            int sizeCheckPoints = checkpoints.Length;
-            int[,] distance = new int[sizeCheckPoints, sizeCheckPoints];
+            _matrixDistance = new int[_sizeRow, _sizeRow];
             int indexI = 0;
             int indexJ = 0;
-            for (int i = 0; i < sizeCheckPoints; i++)
+            for (int i = 0; i < _sizeRow; i++)
             {
-                for (int j = 0; j < sizeCheckPoints; j++)
+                for (int j = 0; j < _sizeRow; j++)
                 {
-                    distance[i, j] = (i != j) ? GetSize(checkpoints[i], checkpoints[j]) : -1;
+                    _matrixDistance[i, j] = (i != j) ? GetSize(checkpoints[i], checkpoints[j]) : -1;
                     ++indexJ;
                 }
                 indexJ = 0;
                 ++indexI;
             }
-
-            return distance;
         }
 
         private static int GetSize(Point a, Point b)
