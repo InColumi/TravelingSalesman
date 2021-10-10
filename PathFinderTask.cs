@@ -49,6 +49,7 @@ namespace RoutePlanning
             int maxAssessment = 0;
             int assessmentI = 0;
             int assessmentJ = 0;
+
             int cell;
             for (int i = 0; i < _sizeRow; i++)
             {
@@ -63,7 +64,7 @@ namespace RoutePlanning
                             {
                                 minValueInRow = cell;
                                 assessmentI = i;
-                                assessmentJ = k;
+                                assessmentJ = j;
                             }
                         }
 
@@ -78,9 +79,63 @@ namespace RoutePlanning
             return new Cell(maxAssessment, assessmentI, assessmentJ);
         }
 
+        private static int[,] TransformMatrixWithAssessmentCell(int[,] matrix, Cell assessment)
+        {
+            int[,] newMatrix = new int[matrix.GetLength(0), matrix.GetLength(0)];
+            for (int i = 0; i < matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < matrix.GetLength(0); j++)
+                {
+                    newMatrix[i, j] = (assessment.I == i && assessment.J == j) ? -1 : matrix[i, j];
+                }
+            }
+            return newMatrix;
+        }
+
+        private static int[,] TransformMatrixWithAssessmentRowCol(int[,] matrix, Cell assessment)
+        {
+            int[,] newMatrix = new int[matrix.GetLength(0), matrix.GetLength(0)];
+            for (int i = 0; i < matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < matrix.GetLength(0); j++)
+                {
+                    newMatrix[i, j] = (assessment.I == i || assessment.J == j) ? -1 : matrix[i, j];
+                }
+            }
+            return newMatrix;
+        }
+
+        private static int[,] GetReducedMatrix(int[,] matrix)
+        {
+            int[] minValuesByRow = GetMinValues(matrix, true);
+            int[] minValuesByCol = GetMinValues(matrix, false);
+
+            int sumMinValuesByRow = 0;
+            int sumMinValuesByCol = 0;
+
+            for (int i = 0; i < _sizeRow; i++)
+            {
+                sumMinValuesByRow += minValuesByRow[i];
+                sumMinValuesByCol += minValuesByCol[i];
+            }
+
+            int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(matrix, minValuesByRow, true);
+            return GetMatrixMinusValueByRowOrCol(matrixReduced, minValuesByCol, false);
+        }
+
+        private static int GetSum(int[] values)
+        {
+            int sum = 0;
+
+            for (int i = 0; i < _sizeRow; i++)
+            {
+                sum += values[i];
+            }
+            return sum;
+        }
+
         private static int[] GetMinPath(Point[] checkpoints)
         {
-            _sizeRow = checkpoints.Length;
             SetMatrixDistance(checkpoints);
             ShowMatrix(_matrixDistance);
             if (_sizeRow == 2)
@@ -88,65 +143,108 @@ namespace RoutePlanning
                 return new int[] { 0, 1 };
             }
 
-            int[] minValuesByRow = GetSumInRowOrCol(_matrixDistance, true);
-            int[] minValuesByCol = GetSumInRowOrCol(_matrixDistance, false);
-            
+            List<int> tree = new List<int>();
+
+            int[] minValuesByRow;
+            int[] minValuesByCol;
+
+            minValuesByRow = GetMinValues(_matrixDistance, true);
+
+            tree.Add(GetSum(GetMinValues(_matrixDistance, true)));
+            int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByRow, true);
+            minValuesByCol = GetMinValues(matrixReduced, false);
+
+            matrixReduced = GetMatrixMinusValueByRowOrCol(matrixReduced, minValuesByCol, false);
+            ShowMatrix(matrixReduced);
             int sumMinValuesByRow = 0;
             int sumMinValuesByCol = 0;
-            
-            for (int i = 0; i < _sizeRow; i++)
+            Cell assessment;
+            while (true)
             {
-                sumMinValuesByRow += minValuesByRow[i];
-                sumMinValuesByCol += minValuesByCol[i];
+                assessment = FindMaxAssessment(matrixReduced);
+                matrixReduced = TransformMatrixWithAssessmentCell(matrixReduced, assessment);
+                ShowMatrix(matrixReduced);
+
+                minValuesByRow = GetMinValues(matrixReduced, true);
+                minValuesByCol = GetMinValues(matrixReduced, false);
+                tree.Add(tree[tree.Count - 1] + GetSum(minValuesByRow) + GetSum(minValuesByCol));
+
+                matrixReduced = TransformMatrixWithAssessmentRowCol(matrixReduced, assessment);
+                ShowMatrix(matrixReduced);
+
+                minValuesByRow = GetMinValues(matrixReduced, true);
+                minValuesByCol = GetMinValues(matrixReduced, false);
+                tree.Add(tree[tree.Count - 1] + GetSum(minValuesByRow) + GetSum(minValuesByCol));
+                //minValuesByRow = GetMinValues(matrixReduced, true);
+                //sumMinValuesByRow = GetSum(minValuesByRow);
+
+                //tree.Add(sumMinValuesByRow + sumMinValuesByCol);
+
+                //matrixReduced = GetMatrixMinusValueByRowOrCol(matrixReduced, minValuesByRow, true);
+
+                //minValuesByCol = GetMinValues(matrixReduced, false);
+                //sumMinValuesByCol = GetSum(minValuesByCol);
+
+                //matrixReduced = GetMatrixMinusValueByRowOrCol(matrixReduced, minValuesByCol, false);
+
+                //tree.Add(sumMinValuesByRow + sumMinValuesByCol);
+                //ShowMatrix(matrixReduced);
+
+
+
+
+
+                int a = 0;
             }
 
-            int[,] matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByRow, true);
-            matrixReduced = GetMatrixMinusValueByRowOrCol(_matrixDistance, minValuesByCol, false);
-            ShowMatrix(matrixReduced);
 
-            Cell assessment = FindMaxAssessment(matrixReduced);
+
 
             return new int[0];
         }
 
         private static int[,] GetMatrixMinusValueByRowOrCol(int[,] matrix, int[] value, bool isRow)
         {
-            int[,] newMatrix = new int[_sizeRow, _sizeRow];
+            int[,] newMatrix = new int[matrix.GetLength(0), matrix.GetLength(0)];
             int cell;
-            for (int i = 0; i < _sizeRow; i++)
+            for (int i = 0; i < matrix.GetLength(0); i++)
             {
-                for (int j = 0; j < _sizeRow; j++)
+                for (int j = 0; j < matrix.GetLength(0); j++)
                 {
                     cell = (isRow) ? matrix[i, j] : matrix[j, i];
-                    newMatrix[i, j] = (cell != -1) ? cell - value[j] : cell;                   
+                    newMatrix[i, j] = (cell != -1) ? cell - value[j] : cell;
                 }
             }
             return newMatrix;
         }
 
-        private static int[] GetSumInRowOrCol(int[,] matrix, bool isRow)
+        private static int[] GetMinValues(int[,] matrix, bool isRow)
         {
             int min = int.MaxValue;
-            int[] minValues = new int[_sizeRow];
+            int[] minValues = new int[matrix.GetLength(0)];
             int cell;
-            for (int i = 0; i < _sizeRow; i++)
+            bool isChangeMinValue = false;
+            for (int i = 0; i < matrix.GetLength(0); i++)
             {
-                for (int j = 0; j < _sizeRow; j++)
+                for (int j = 0; j < matrix.GetLength(0); j++)
                 {
                     cell = (isRow) ? matrix[i, j] : matrix[j, i];
                     if (cell < min && cell != -1)
                     {
+                        isChangeMinValue = true;
                         min = cell;
                     }
                 }
-                minValues[i] = min;
+                minValues[i] = (isChangeMinValue) ? min : 0;
                 min = int.MaxValue;
+                isChangeMinValue = false;
             }
             return minValues;
         }
 
         private static void SetMatrixDistance(Point[] checkpoints)
         {
+            _sizeRow = checkpoints.Length;
             _matrixDistance = new int[_sizeRow, _sizeRow];
             int indexI = 0;
             int indexJ = 0;
